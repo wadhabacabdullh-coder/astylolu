@@ -1,0 +1,525 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#05080f">
+<title>Jarvis</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+  :root {
+    --bg: #05080f;
+    --panel: #0d1422;
+    --line: #1c2a42;
+    --text: #dce7f7;
+    --muted: #7d8fab;
+    --accent: #2fd2ff;
+    --accent-2: #0a7ea8;
+    --danger: #ff5d6c;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font: 16px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    display: flex; flex-direction: column;
+    padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
+  }
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 16px; border-bottom: 1px solid var(--line);
+  }
+  header h1 { margin: 0; font-size: 18px; letter-spacing: .25em; color: var(--accent); }
+  header .right { display: flex; gap: 8px; align-items: center; }
+  #cost { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  button.icon {
+    background: none; border: 1px solid var(--line); color: var(--text);
+    border-radius: 10px; padding: 6px 10px; font-size: 14px;
+  }
+  #log { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+  .msg { max-width: 85%; padding: 10px 14px; border-radius: 16px; white-space: pre-wrap; word-wrap: break-word; }
+  .user { align-self: flex-end; background: var(--accent-2); color: #fff; border-bottom-right-radius: 4px; }
+  .bot { align-self: flex-start; background: var(--panel); border: 1px solid var(--line); border-bottom-left-radius: 4px; }
+  .err { align-self: center; color: var(--danger); font-size: 14px; text-align: center; }
+  .hint { color: var(--muted); text-align: center; margin: auto; max-width: 300px; }
+  footer { padding: 12px 16px 16px; border-top: 1px solid var(--line); }
+  #status { text-align: center; font-size: 13px; color: var(--muted); min-height: 1.4em; margin-bottom: 10px; }
+  .controls { display: flex; align-items: center; gap: 10px; }
+  #text {
+    flex: 1; min-width: 0; background: var(--panel); color: var(--text);
+    border: 1px solid var(--line); border-radius: 22px; padding: 12px 16px; font-size: 16px;
+  }
+  #mic {
+    width: 64px; height: 64px; flex: none; border-radius: 50%; border: 2px solid var(--accent);
+    background: radial-gradient(circle, #0f2d40 0%, var(--bg) 70%); color: var(--accent);
+    font-size: 26px; display: grid; place-items: center;
+  }
+  #mic.listening { background: var(--accent); color: var(--bg); animation: pulse 1.2s infinite; }
+  #mic.thinking { border-style: dashed; animation: spin 1.5s linear infinite; }
+  #mic.speaking { box-shadow: 0 0 0 6px rgba(47,210,255,.25); }
+  @keyframes pulse { 50% { box-shadow: 0 0 0 12px rgba(47,210,255,0); } 0% { box-shadow: 0 0 0 0 rgba(47,210,255,.6); } }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  dialog {
+    width: min(480px, calc(100% - 32px)); background: var(--panel); color: var(--text);
+    border: 1px solid var(--line); border-radius: 16px; padding: 20px;
+  }
+  dialog::backdrop { background: rgba(0,0,0,.6); }
+  dialog h2 { margin: 0 0 12px; font-size: 18px; }
+  label { display: block; font-size: 13px; color: var(--muted); margin: 14px 0 4px; }
+  dialog input[type=password], dialog input[type=text], dialog select {
+    width: 100%; background: var(--bg); color: var(--text); border: 1px solid var(--line);
+    border-radius: 10px; padding: 10px; font-size: 15px;
+  }
+  .row { display: flex; align-items: center; gap: 10px; margin-top: 14px; font-size: 15px; }
+  .row input { width: 20px; height: 20px; }
+  .small { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+  .actions button { border-radius: 10px; padding: 10px 16px; font-size: 15px; border: 1px solid var(--line); background: var(--bg); color: var(--text); }
+  .actions .primary { background: var(--accent); color: var(--bg); border-color: var(--accent); font-weight: 600; }
+</style>
+</head>
+<body>
+<header>
+  <h1>JARVIS</h1>
+  <div class="right">
+    <span id="cost" title="Estimated spend this session">$0.00000</span>
+    <button class="icon" id="clearBtn" aria-label="Clear conversation">⟲</button>
+    <button class="icon" id="settingsBtn" aria-label="Settings">⚙</button>
+  </div>
+</header>
+
+<main id="log">
+  <p class="hint" id="hint">Tap the mic and talk, or type below.<br>Add your Anthropic API key in ⚙ first.</p>
+</main>
+
+<footer>
+  <div id="status">Ready</div>
+  <form class="controls" id="form">
+    <input id="text" type="text" placeholder="Ask Jarvis…" autocomplete="off" enterkeyhint="send">
+    <button type="button" id="mic" aria-label="Talk">🎙</button>
+  </form>
+</footer>
+
+<dialog id="settings">
+  <form method="dialog" id="settingsForm">
+    <h2>Settings</h2>
+
+    <label for="apiKey">Anthropic API key</label>
+    <input id="apiKey" type="password" placeholder="sk-ant-…" autocomplete="off">
+    <div class="small">Stored only on this phone (browser storage). Sent only to api.anthropic.com.</div>
+
+    <label for="model">Brain</label>
+    <select id="model">
+      <option value="claude-haiku-5-5">Haiku 5.5 — fastest, cheapest (recommended)</option>
+      <option value="claude-sonnet-5-5">Sonnet 5.5 — smarter, ~20× cost</option>
+      <option value="claude-opus-5-5">Opus 5.5 — smartest, ~40× cost</option>
+    </select>
+
+    <label for="length">Reply length</label>
+    <select id="length">
+      <option value="250">Short (saves credits)</option>
+      <option value="600">Medium</option>
+      <option value="1500">Long</option>
+    </select>
+
+    <label for="voice">Voice</label>
+    <select id="voice"></select>
+
+    <label for="rate">Speaking speed</label>
+    <select id="rate">
+      <option value="0.9">Slow</option>
+      <option value="1">Normal</option>
+      <option value="1.15">Fast</option>
+      <option value="1.3">Very fast</option>
+    </select>
+
+    <div class="row"><input id="handsFree" type="checkbox"><span>Hands-free (keeps listening after replying)</span></div>
+    <div class="row"><input id="wakeWord" type="checkbox"><span>Only respond when I say “Jarvis”</span></div>
+    <div class="row"><input id="speak" type="checkbox"><span>Speak replies out loud</span></div>
+
+    <div class="actions">
+      <button value="cancel" formnovalidate>Cancel</button>
+      <button value="save" class="primary">Save</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+"use strict";
+
+// ---- Config -------------------------------------------------------------
+
+// Rough $ per 1M tokens [input, output], used only for the on-screen spend counter.
+const PRICES = {
+  "claude-haiku-5-5": [0.10, 0.50],
+  "claude-sonnet-5-5": [2.00, 10.00],
+  "claude-opus-5-5": [4.00, 20.00],
+};
+
+// Only the last N messages are re-sent each turn. Every request pays for the
+// whole history again, so a short window is the biggest credit saver.
+const HISTORY_WINDOW = 8;
+
+const SYSTEM_PROMPT =
+  "You are JARVIS, a witty, loyal personal AI assistant talking through a phone's speaker. " +
+  "Your replies are read aloud, so: answer in 1-3 short sentences unless asked for more; " +
+  "no markdown, bullet points, emojis, code blocks or URLs; spell things the way they should be spoken. " +
+  "Address the user as \"sir\" or \"ma'am\" only if they ask you to. Be direct and helpful.";
+
+const DEFAULTS = {
+  apiKey: "", model: "claude-haiku-5-5", length: "250", voice: "", rate: "1.15",
+  handsFree: false, wakeWord: false, speak: true,
+};
+
+// ---- State --------------------------------------------------------------
+
+const store = {
+  get(k) { try { return localStorage.getItem("jarvis." + k); } catch { return null; } },
+  set(k, v) { try { localStorage.setItem("jarvis." + k, v); } catch {} },
+};
+
+function loadSettings() {
+  const s = { ...DEFAULTS };
+  for (const k of Object.keys(DEFAULTS)) {
+    const v = store.get(k);
+    if (v === null) continue;
+    s[k] = typeof DEFAULTS[k] === "boolean" ? v === "true" : v;
+  }
+  return s;
+}
+
+let settings = loadSettings();
+let history = [];          // Anthropic message params
+let spend = 0;
+let busy = false;
+let abortCtl = null;
+
+const $ = (id) => document.getElementById(id);
+const log = $("log"), statusEl = $("status"), mic = $("mic"), textIn = $("text");
+
+function setStatus(text, mode = "") {
+  statusEl.textContent = text;
+  mic.className = mode;
+}
+
+function addMsg(text, cls) {
+  $("hint")?.remove();
+  const el = document.createElement("div");
+  el.className = "msg " + cls;
+  el.textContent = text;
+  log.appendChild(el);
+  log.scrollTop = log.scrollHeight;
+  return el;
+}
+
+// ---- Speech output (free, on-device) ------------------------------------
+
+const synth = window.speechSynthesis;
+let voices = [];
+let pendingUtterances = 0;
+
+function loadVoices() {
+  voices = synth ? synth.getVoices() : [];
+  const sel = $("voice");
+  sel.innerHTML = "";
+  const auto = new Option("Auto (best English voice)", "");
+  sel.add(auto);
+  for (const v of voices) sel.add(new Option(`${v.name} (${v.lang})`, v.name));
+  sel.value = settings.voice;
+}
+if (synth) {
+  loadVoices();
+  synth.onvoiceschanged = loadVoices;
+}
+
+function pickVoice() {
+  if (settings.voice) return voices.find((v) => v.name === settings.voice);
+  const en = voices.filter((v) => v.lang.startsWith("en"));
+  return en.find((v) => /en-GB/i.test(v.lang) && /male|daniel|george|uk english/i.test(v.name))
+      || en.find((v) => /en-GB/i.test(v.lang))
+      || en[0];
+}
+
+function speak(text) {
+  if (!settings.speak || !synth || !text.trim()) return;
+  const u = new SpeechSynthesisUtterance(text);
+  const v = pickVoice();
+  if (v) { u.voice = v; u.lang = v.lang; }
+  u.rate = parseFloat(settings.rate);
+  pendingUtterances++;
+  mic.classList.add("speaking");
+  u.onend = u.onerror = () => {
+    pendingUtterances = Math.max(0, pendingUtterances - 1);
+    if (pendingUtterances === 0) onSpeechDone();
+  };
+  synth.speak(u);
+}
+
+function stopSpeaking() {
+  if (!synth) return;
+  pendingUtterances = 0;
+  synth.cancel();
+  mic.classList.remove("speaking");
+}
+
+function onSpeechDone() {
+  mic.classList.remove("speaking");
+  if (!busy && settings.handsFree) startListening();
+}
+
+// ---- Speech input (free, on-device / Google) ----------------------------
+
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+let rec = null;
+let listening = false;
+
+function startListening() {
+  if (!SR) { setStatus("Voice input not supported here. Use Chrome on Android."); return; }
+  if (listening || busy) return;
+  stopSpeaking();
+  rec = new SR();
+  rec.lang = navigator.language || "en-US";
+  rec.interimResults = true;
+  rec.maxAlternatives = 1;
+  rec.continuous = false;
+  let finalText = "";
+
+  rec.onstart = () => { listening = true; setStatus(settings.wakeWord ? "Listening for “Jarvis”…" : "Listening…", "listening"); };
+  rec.onresult = (e) => {
+    let interim = "";
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      const t = e.results[i][0].transcript;
+      if (e.results[i].isFinal) finalText += t; else interim += t;
+    }
+    textIn.value = finalText || interim;
+  };
+  rec.onerror = (e) => {
+    if (e.error === "not-allowed") setStatus("Microphone blocked. Allow mic access for this site.");
+    else if (e.error !== "no-speech" && e.error !== "aborted") setStatus("Mic error: " + e.error);
+  };
+  rec.onend = () => {
+    listening = false;
+    mic.className = "";
+    let said = finalText.trim();
+    if (settings.wakeWord) {
+      const m = said.match(/\bjarvis\b[\s,.!?]*(.*)$/i);
+      if (!m) {
+        textIn.value = "";
+        if (settings.handsFree) setTimeout(startListening, 250); else setStatus("Ready");
+        return;
+      }
+      said = m[1].trim() || "Yes?";
+    }
+    if (said) { textIn.value = ""; ask(said); }
+    else if (settings.handsFree) setTimeout(startListening, 250);
+    else setStatus("Ready");
+  };
+  try { rec.start(); } catch { listening = false; }
+}
+
+function stopListening() {
+  if (rec && listening) rec.abort();
+  listening = false;
+}
+
+// ---- Claude -------------------------------------------------------------
+
+function requestBody() {
+  const model = settings.model;
+  const body = {
+    model,
+    max_tokens: parseInt(settings.length, 10),
+    stream: true,
+    system: SYSTEM_PROMPT,
+    messages: history.slice(-HISTORY_WINDOW),
+    // Low effort = fewer tokens and a faster first word.
+    output_config: { effort: "low" },
+  };
+  // Skip thinking where the model allows it: faster and cheaper for chat.
+  if (model === "claude-haiku-5-5") body.thinking = { type: "disabled" };
+  else if (model === "claude-sonnet-5-5") body.thinking = { type: "between_tools" };
+  // Opus 5.5 can't disable thinking; low effort keeps it light.
+  return body;
+}
+
+function friendlyError(status, msg) {
+  if (status === 401) return "Your API key was rejected. Check it in ⚙ settings.";
+  if (status === 403) return "This API key isn't allowed to do that.";
+  if (status === 429) return "Rate limited — wait a moment and try again.";
+  if (status === 529 || status === 503) return "Claude is overloaded right now. Try again shortly.";
+  if (status === 400 && /credit/i.test(msg)) return "Your Anthropic account is out of credits.";
+  return `Error ${status || ""}: ${msg || "request failed"}`;
+}
+
+async function ask(text) {
+  if (busy) return;
+  if (!settings.apiKey) { addMsg("Add your Anthropic API key in ⚙ settings first.", "err"); $("settingsBtn").click(); return; }
+  stopListening();
+  stopSpeaking();
+  busy = true;
+  addMsg(text, "user");
+  history.push({ role: "user", content: text });
+  // The first message sent must be from the user.
+  while (history.length > HISTORY_WINDOW && history[history.length - HISTORY_WINDOW].role !== "user") history.shift();
+  setStatus("Thinking…", "thinking");
+
+  const bubble = addMsg("…", "bot");
+  let reply = "", spoken = 0, inTok = 0, outTok = 0, stopReason = null;
+
+  // Speak each sentence as soon as it's complete instead of waiting for the full reply.
+  const flushSpeech = (final) => {
+    const rest = reply.slice(spoken);
+    const re = final ? /[\s\S]+/ : /^[\s\S]*?[.!?…](?=\s)|^[\s\S]*?\n/;
+    const m = rest.match(re);
+    if (m) { speak(m[0]); spoken += m[0].length; if (!final) flushSpeech(false); }
+  };
+
+  abortCtl = new AbortController();
+  try {
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      signal: abortCtl.signal,
+      headers: {
+        "content-type": "application/json",
+        "x-api-key": settings.apiKey,
+        "anthropic-version": "2023-06-01",
+        "anthropic-dangerous-direct-browser-access": "true",
+      },
+      body: JSON.stringify(requestBody()),
+    });
+    if (!res.ok) {
+      let msg = "";
+      try { msg = (await res.json()).error?.message || ""; } catch {}
+      throw Object.assign(new Error(friendlyError(res.status, msg)), { shown: true });
+    }
+
+    setStatus("Speaking…", "speaking");
+    const reader = res.body.getReader();
+    const dec = new TextDecoder();
+    let buf = "";
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      let nl;
+      while ((nl = buf.indexOf("\n")) >= 0) {
+        const line = buf.slice(0, nl).trim();
+        buf = buf.slice(nl + 1);
+        if (!line.startsWith("data:")) continue;
+        let ev;
+        try { ev = JSON.parse(line.slice(5)); } catch { continue; }
+        if (ev.type === "message_start") {
+          const u = ev.message.usage || {};
+          inTok = (u.input_tokens || 0) + (u.cache_creation_input_tokens || 0) + (u.cache_read_input_tokens || 0);
+        } else if (ev.type === "content_block_delta" && ev.delta.type === "text_delta") {
+          reply += ev.delta.text;
+          bubble.textContent = reply;
+          log.scrollTop = log.scrollHeight;
+          flushSpeech(false);
+        } else if (ev.type === "message_delta") {
+          stopReason = ev.delta.stop_reason || stopReason;
+          if (ev.usage?.output_tokens) outTok = ev.usage.output_tokens;
+        } else if (ev.type === "error") {
+          throw Object.assign(new Error(friendlyError(0, ev.error?.message)), { shown: true });
+        }
+      }
+    }
+
+    if (stopReason === "refusal") {
+      reply = reply || "Sorry, I can't help with that one.";
+      bubble.textContent = reply;
+    }
+    flushSpeech(true);
+    if (!reply) bubble.textContent = "(no reply)";
+    history.push({ role: "assistant", content: reply || "(no reply)" });
+
+    const [pIn, pOut] = PRICES[settings.model] || [0, 0];
+    spend += (inTok * pIn + outTok * pOut) / 1e6;
+    $("cost").textContent = "$" + spend.toFixed(5);
+    $("cost").title = `Last reply: ${inTok} in / ${outTok} out tokens`;
+  } catch (err) {
+    bubble.remove();
+    history.pop(); // drop the unanswered user turn so history stays valid
+    if (err.name !== "AbortError") {
+      const msg = err.shown ? err.message : "Network error — check your connection.";
+      addMsg(msg, "err");
+      speak(msg.replace(/⚙/g, ""));
+    }
+  } finally {
+    busy = false;
+    abortCtl = null;
+    if (pendingUtterances === 0) {
+      setStatus("Ready");
+      if (settings.handsFree) startListening();
+    } else {
+      statusEl.textContent = "Speaking… (tap mic to interrupt)";
+    }
+  }
+}
+
+// ---- UI wiring ----------------------------------------------------------
+
+mic.addEventListener("click", () => {
+  if (busy) { abortCtl?.abort(); stopSpeaking(); return; }
+  if (pendingUtterances > 0) { stopSpeaking(); startListening(); return; }
+  if (listening) { stopListening(); setStatus("Ready"); return; }
+  startListening();
+});
+
+$("form").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const t = textIn.value.trim();
+  if (!t) return;
+  textIn.value = "";
+  ask(t);
+});
+
+$("clearBtn").addEventListener("click", () => {
+  abortCtl?.abort();
+  stopSpeaking();
+  history = [];
+  log.innerHTML = "";
+  setStatus("Conversation cleared");
+});
+
+const dlg = $("settings");
+$("settingsBtn").addEventListener("click", () => {
+  $("apiKey").value = settings.apiKey;
+  $("model").value = settings.model;
+  $("length").value = settings.length;
+  $("voice").value = settings.voice;
+  $("rate").value = settings.rate;
+  $("handsFree").checked = settings.handsFree;
+  $("wakeWord").checked = settings.wakeWord;
+  $("speak").checked = settings.speak;
+  dlg.showModal();
+});
+
+dlg.addEventListener("close", () => {
+  if (dlg.returnValue !== "save") return;
+  settings = {
+    apiKey: $("apiKey").value.trim(),
+    model: $("model").value,
+    length: $("length").value,
+    voice: $("voice").value,
+    rate: $("rate").value,
+    handsFree: $("handsFree").checked,
+    wakeWord: $("wakeWord").checked,
+    speak: $("speak").checked,
+  };
+  for (const [k, v] of Object.entries(settings)) store.set(k, String(v));
+  setStatus("Settings saved");
+});
+
+if (!settings.apiKey) setTimeout(() => $("settingsBtn").click(), 300);
+
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("sw.js").catch(() => {});
+}
+</script>
+</body>
+</html>
