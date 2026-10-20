@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="accessibility_desc">Lets Jarvis swipe, tap, go back and go home when you ask it to by voice (for example \"swipe up\" on TikTok). Jarvis does not read your screen.</string>
+</resources>

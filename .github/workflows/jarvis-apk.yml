@@ -1,0 +1,51 @@
+name: Build Jarvis APK
+
+on:
+  push:
+    paths:
+      - 'jarvis-android/**'
+      - '.github/workflows/jarvis-apk.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.14.3'
+
+      - name: Build APK
+        working-directory: jarvis-android
+        run: gradle assembleRelease --no-daemon --stacktrace
+
+      - name: Name the APK
+        run: cp jarvis-android/app/build/outputs/apk/release/app-release.apk Jarvis.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Jarvis-apk
+          path: Jarvis.apk
+
+      # A fixed release, so the download link never changes.
+      - name: Publish download link
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: jarvis-latest
+          name: Jarvis for Android (latest)
+          target_commitish: ${{ github.sha }}
+          make_latest: true
+          files: Jarvis.apk
+          body: |
+            Download **Jarvis.apk** below on your Android phone, open it, and tap Install.
+            Setup steps: see jarvis-android/README.md in the repository.

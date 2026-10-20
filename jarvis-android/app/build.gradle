@@ -1,0 +1,48 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.jarvis.assistant'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId 'com.jarvis.assistant'
+        minSdk 26
+        targetSdk 35
+        // Each CI build gets a higher version so it installs over the previous one.
+        versionCode((System.getenv('GITHUB_RUN_NUMBER') ?: '1').toInteger())
+        versionName "1.0.${System.getenv('GITHUB_RUN_NUMBER') ?: '0'}"
+    }
+
+    // A fixed key so new builds install as updates instead of needing an uninstall.
+    // It only signs this personal sideloaded app; it is not a Play Store key.
+    signingConfigs {
+        jarvis {
+            storeFile file('jarvis.keystore')
+            storePassword 'jarvis-sideload'
+            keyAlias 'jarvis'
+            keyPassword 'jarvis-sideload'
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig signingConfigs.jarvis
+        }
+        debug {
+            signingConfig signingConfigs.jarvis
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    lint {
+        checkReleaseBuilds false
+        abortOnError false
+    }
+}
