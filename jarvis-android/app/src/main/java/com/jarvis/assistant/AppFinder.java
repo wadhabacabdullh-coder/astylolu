@@ -1,7 +1,10 @@
 package com.jarvis.assistant;
 
+import android.app.ActivityOptions;
+import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
+import android.os.Build;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 
@@ -21,6 +24,34 @@ final class AppFinder {
             {"face book", "facebook"}, {"fb", "facebook"}, {"messenger", "messenger"},
             {"twitter", "x"}, {"google maps", "maps"}, {"play store", "play store"},
             {"camera app", "camera"}, {"settings app", "settings"}, {"spotify music", "spotify"},
+    };
+
+    // Package names of popular apps, used when the spoken name doesn't match the icon label.
+    private static final String[][] KNOWN = {
+            {"tiktok", "com.zhiliaoapp.musically", "com.ss.android.ugc.trill"},
+            {"youtube", "com.google.android.youtube"},
+            {"youtube music", "com.google.android.apps.youtube.music"},
+            {"instagram", "com.instagram.android"},
+            {"snapchat", "com.snapchat.android"},
+            {"whatsapp", "com.whatsapp"},
+            {"spotify", "com.spotify.music"},
+            {"netflix", "com.netflix.mediaclient"},
+            {"facebook", "com.facebook.katana"},
+            {"messenger", "com.facebook.orca"},
+            {"x", "com.twitter.android"},
+            {"discord", "com.discord"},
+            {"telegram", "org.telegram.messenger"},
+            {"roblox", "com.roblox.client"},
+            {"chrome", "com.android.chrome"},
+            {"gmail", "com.google.android.gm"},
+            {"maps", "com.google.android.apps.maps"},
+            {"play store", "com.android.vending"},
+            {"camera", "com.sec.android.app.camera", "com.google.android.GoogleCamera"},
+            {"gallery", "com.sec.android.gallery3d", "com.google.android.apps.photos"},
+            {"settings", "com.android.settings"},
+            {"pinterest", "com.pinterest"},
+            {"twitch", "tv.twitch.android.app"},
+            {"capcut", "com.lemon.lvoverseas"},
     };
 
     private AppFinder() {}
@@ -68,12 +99,47 @@ final class AppFinder {
         return best;
     }
 
+    /** Finds the package for a spoken app name: icon labels first, then well-known apps. */
+    static String findPackage(Context c, String spoken) {
+        Map<String, String> apps = installedApps(c);
+        String label = bestMatch(spoken, apps);
+        if (label != null) return apps.get(label);
+
+        Map<String, String> known = new LinkedHashMap<>();
+        for (String[] k : KNOWN) {
+            for (int i = 1; i < k.length; i++) {
+                if (c.getPackageManager().getLaunchIntentForPackage(k[i]) != null) { known.put(k[0], k[i]); break; }
+            }
+        }
+        label = bestMatch(spoken, known);
+        return label != null ? known.get(label) : null;
+    }
+
     static boolean open(Context c, String pkg) {
         Intent launch = c.getPackageManager().getLaunchIntentForPackage(pkg);
         if (launch == null) return false;
         launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED);
-        c.startActivity(launch);
-        return true;
+        // Android blocks most background apps from opening other apps. Starting it from
+        // the accessibility service is allowed, so use that when phone control is on.
+        PhoneControl pc = PhoneControl.instance;
+        try {
+            if (pc != null) {
+                pc.startActivity(launch);
+                return true;
+            }
+            if (Build.VERSION.SDK_INT >= 34) {
+                ActivityOptions opts = ActivityOptions.makeBasic()
+                        .setPendingIntentBackgroundActivityStartMode(ActivityOptions.MODE_BACKGROUND_ACTIVITY_START_ALLOWED);
+                PendingIntent.getActivity(c, pkg.hashCode(), launch,
+                        PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT)
+                        .send(c, 0, null, null, null, null, opts.toBundle());
+            } else {
+                c.startActivity(launch);
+            }
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     private static String compact(String s) {

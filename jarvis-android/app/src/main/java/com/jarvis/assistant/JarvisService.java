@@ -27,7 +27,6 @@ import android.widget.Toast;
 
 import java.util.ArrayList;
 import java.util.Locale;
-import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -42,7 +41,8 @@ public class JarvisService extends Service {
     // sentences are grouped so Fish Audio gets fewer, larger requests.
     private static final int VOICE_CHUNK_CHARS = 120;
     private static final Pattern SENTENCE_END = Pattern.compile("[.!?…]+(?=\\s)|\\n");
-    private static final Pattern WAKE = Pattern.compile("\\b(?:jarvis|jervis|jarvas)\\b[\\s,.!?]*(.*)$", Pattern.CASE_INSENSITIVE);
+    private static final Pattern WAKE = Pattern.compile(
+            "\\b(?:jarvis's|jarvis|jervis|jarvas|jarvus|javis|garvis|charvis|travis)\\b[\\s,.!?]*(.*)$", Pattern.CASE_INSENSITIVE);
 
     private final Handler main = new Handler(Looper.getMainLooper());
     private WindowManager wm;
@@ -311,10 +311,22 @@ public class JarvisService extends Service {
         followUp = false;
         if (needWakeWord() && alwaysOn() && !free) {
             Matcher m = WAKE.matcher(said);
-            if (!m.find()) { listenAgainLater(200); return; }
-            said = m.group(1).trim();
-            if (said.isEmpty()) { followUp = true; voice.speakLocal("Yes?"); return; }
+            if (m.find()) {
+                String after = m.group(1).trim();
+                String before = said.substring(0, m.start()).replaceAll("[\\s,.!?]+$", "").trim();
+                if (before.matches("(?i)(?:hey|hi|ok|okay|yo|oi)?")) before = "";
+                said = !after.isEmpty() ? after : before;
+                if (said.isEmpty()) { followUp = true; voice.speakLocal("Yes?"); return; }
+            } else {
+                // "Open <app>" works without the wake word, but only for an app that's installed.
+                Commands.Action open = Commands.parse(said);
+                if (open == null || open.type != Commands.Type.OPEN_APP || AppFinder.findPackage(this, open.arg) == null) {
+                    listenAgainLater(200);
+                    return;
+                }
+            }
         }
+        Toast.makeText(this, "🎙 " + said, Toast.LENGTH_SHORT).show();   // shows what Jarvis heard
 
         Commands.Action action = Commands.parse(said);
         if (action != null) {
@@ -329,10 +341,13 @@ public class JarvisService extends Service {
         boolean ok = true;
         switch (a.type) {
             case OPEN_APP: {
-                Map<String, String> apps = AppFinder.installedApps(this);
-                String label = AppFinder.bestMatch(a.arg, apps);
-                if (label == null || !AppFinder.open(this, apps.get(label))) {
+                String pkg = AppFinder.findPackage(this, a.arg);
+                if (pkg == null) {
                     voice.speakLocal("I couldn't find an app called " + a.arg + ".");
+                    return;
+                }
+                if (!AppFinder.open(this, pkg)) {
+                    voice.speakLocal("Android blocked me from opening " + a.arg + ". Turn on Jarvis phone control in Accessibility settings.");
                     return;
                 }
                 break;
