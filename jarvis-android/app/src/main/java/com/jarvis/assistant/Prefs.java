@@ -12,8 +12,8 @@ final class Prefs {
     static final String FISH_KEY = "fish_key";
     static final String FISH_VOICE = "fish_voice";
     static final String FISH_MODEL = "fish_model";
-    static final String HANDS_FREE = "hands_free";
-    static final String WAKE_WORD = "wake_word";
+    static final String HANDS_FREE = "always_listen";   // default on
+    static final String WAKE_WORD = "need_wake_word";  // default on
     static final String BUBBLE_X = "bubble_x";
     static final String BUBBLE_Y = "bubble_y";
 
@@ -30,7 +30,7 @@ final class Prefs {
         return v == null || v.trim().isEmpty() ? def : v.trim();
     }
 
-    static boolean bool(Context c, String key) {
-        return get(c).getBoolean(key, false);
+    static boolean bool(Context c, String key, boolean def) {
+        return get(c).getBoolean(key, def);
     }
 }

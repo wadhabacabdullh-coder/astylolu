@@ -25,7 +25,8 @@ No Termux needed. The app talks to OpenRouter and Fish Audio directly.
 
 | Do this | What happens |
 |---|---|
-| Tap the circle | Jarvis listens. Tap again while it talks to interrupt |
+| Say **"Jarvis, …"** | Jarvis is always listening, no tapping needed (e.g. "Jarvis, open TikTok", "Jarvis, next") |
+| Tap the circle | Talk without saying "Jarvis", or interrupt it while it talks. Tap while it's listening to pause it |
 | Drag the circle | Move it anywhere (it remembers the spot) |
 | Hold the circle | Opens the Jarvis settings screen |
 | Notification → Stop | Turns Jarvis off |
@@ -36,5 +37,6 @@ Anything else is a question for the AI. Answers are short to save OpenRouter and
 
 ## Notes
 
-- **Hands-free mode** keeps listening after each reply. Android's speech recognizer may briefly lower or pause other audio each time it starts listening.
+- **Always listening** is on by default and needs the wake word "Jarvis", so it won't answer TikTok sounds and waste credits. After Jarvis answers, you can reply once without saying "Jarvis".
+- Android's speech recognizer may make a short beep or briefly lower other audio each time it restarts listening.
 - Updates: a new APK is built whenever this folder changes. Install it over the old one; your settings are kept.

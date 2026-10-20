@@ -73,7 +73,7 @@ public class MainActivity extends Activity {
         title.setTypeface(Typeface.DEFAULT_BOLD);
         title.setGravity(Gravity.CENTER);
         root.addView(title);
-        TextView sub = text("Your voice assistant. A glowing circle sits in the corner of your screen. Tap it to talk, drag it to move it, and hold it to open this screen.", 14, MUTED);
+        TextView sub = text("Your voice assistant. Just say \"Jarvis\" and what you want. The glowing circle in the corner shows when it's listening. Tap it to pause, drag it to move it, and hold it to open this screen.", 14, MUTED);
         sub.setGravity(Gravity.CENTER);
         root.addView(sub);
 
@@ -114,8 +114,8 @@ public class MainActivity extends Activity {
         fishModel = spinner(FISH_MODELS, indexOf(FISH_MODELS, p.getString(Prefs.FISH_MODEL, "s2-pro")));
 
         heading("4 · Listening");
-        handsFree = check("Hands-free: keep listening after each reply", p.getBoolean(Prefs.HANDS_FREE, false));
-        wakeWord = check("Only respond when I say \"Jarvis\"", p.getBoolean(Prefs.WAKE_WORD, false));
+        handsFree = check("Always listening: just say \"Jarvis …\", no tapping", p.getBoolean(Prefs.HANDS_FREE, true));
+        wakeWord = check("Require \"Jarvis\" before each request (recommended: stops it from answering TikTok sounds and wasting credits)", p.getBoolean(Prefs.WAKE_WORD, true));
 
         startBtn = button("Save & start Jarvis", v -> saveAndStart());
         startBtn.setBackground(rounded(CYAN));
@@ -127,7 +127,9 @@ public class MainActivity extends Activity {
 
         heading("Things you can say");
         root.addView(text(
-                "• \"Open TikTok\" / \"Open YouTube\" / \"Open Spotify\"\n"
+                "Start with \"Jarvis\", for example \"Jarvis, open TikTok\" or \"Jarvis, next\". "
+                + "After Jarvis answers a question, you can reply once without saying Jarvis.\n\n"
+                + "• \"Open TikTok\" / \"Open YouTube\" / \"Open Spotify\"\n"
                 + "• \"Swipe up\" or \"Next\": next video\n"
                 + "• \"Swipe down\" or \"Previous\": last video\n"
                 + "• \"Pause\" / \"Play\" · \"Like it\"\n"

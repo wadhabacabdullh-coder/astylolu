@@ -53,6 +53,9 @@ public class JarvisService extends Service {
     private Voice voice;
 
     private boolean listening;
+    private boolean paused;      // user tapped the circle or said "stop listening"
+    private boolean followUp;    // next request doesn't need the wake word
+    private boolean netWarned;
     private boolean thinking;
     private final StringBuilder reply = new StringBuilder();
     private int spoken;
@@ -85,6 +88,7 @@ public class JarvisService extends Service {
             @Override public void onVoiceError(String message) { toast(message); }
         });
         addBubble();
+        if (alwaysOn()) main.postDelayed(this::autoListen, 600);
     }
 
     @Override
@@ -190,18 +194,31 @@ public class JarvisService extends Service {
         wm.addView(bubble, lp);
     }
 
+    private boolean alwaysOn() {
+        return Prefs.bool(this, Prefs.HANDS_FREE, true);
+    }
+
+    private boolean needWakeWord() {
+        return Prefs.bool(this, Prefs.WAKE_WORD, true);
+    }
+
+    /** Tap: talk now (no wake word needed), interrupt Jarvis, or pause listening. */
     private void onBubbleTap() {
         if (thinking || voice.isSpeaking()) {
             brain.cancel();
             voice.stop();
             thinking = false;
-            startListening();
-        } else if (listening) {
+        } else if (listening && (!alwaysOn() || followUp)) {
             stopListening();
+            paused = true;
             bubble.setState(BubbleView.State.IDLE);
-        } else {
-            startListening();
+            if (alwaysOn()) toast("Jarvis paused. Tap the circle to wake it.");
+            return;
         }
+        paused = false;
+        followUp = true;
+        if (listening) stopListening();
+        startListening();
     }
 
     // ---- Listening ---------------------------------------------------------
@@ -233,8 +250,19 @@ public class JarvisService extends Service {
     }
 
     private void listenAgainLater(long delayMs) {
-        if (Prefs.bool(this, Prefs.HANDS_FREE)) main.postDelayed(this::startListening, delayMs);
-        else bubble.setState(BubbleView.State.IDLE);
+        main.removeCallbacks(autoListenTask);
+        if (alwaysOn() && !paused) {
+            if (!listening) bubble.setState(BubbleView.State.IDLE);
+            main.postDelayed(autoListenTask, delayMs);
+        } else {
+            bubble.setState(BubbleView.State.IDLE);
+        }
+    }
+
+    private final Runnable autoListenTask = this::autoListen;
+
+    private void autoListen() {
+        if (!paused && !thinking && !voice.isSpeaking()) startListening();
     }
 
     private final class Listener implements RecognitionListener {
@@ -255,16 +283,20 @@ public class JarvisService extends Service {
                 recognizer.destroy();
                 recognizer = null;
                 listenAgainLater(500);
-            } else if (error == SpeechRecognizer.ERROR_NETWORK || error == SpeechRecognizer.ERROR_NETWORK_TIMEOUT) {
-                bubble.setState(BubbleView.State.IDLE);
-                toast("No internet for speech recognition.");
+            } else if (error == SpeechRecognizer.ERROR_NETWORK || error == SpeechRecognizer.ERROR_NETWORK_TIMEOUT
+                    || error == SpeechRecognizer.ERROR_SERVER) {
+                if (!netWarned) toast("No internet for speech recognition. Retrying…");
+                netWarned = true;
+                listenAgainLater(5000);
             } else {
-                listenAgainLater(300);   // no speech heard
+                followUp = false;        // nothing said: the follow-up window ends
+                listenAgainLater(300);
             }
         }
 
         @Override public void onResults(Bundle results) {
             listening = false;
+            netWarned = false;
             ArrayList<String> list = results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
             String said = list != null && !list.isEmpty() ? list.get(0).trim() : "";
             handleUtterance(said);
@@ -275,11 +307,13 @@ public class JarvisService extends Service {
 
     private void handleUtterance(String said) {
         if (said.isEmpty()) { listenAgainLater(300); return; }
-        if (Prefs.bool(this, Prefs.WAKE_WORD)) {
+        boolean free = followUp;
+        followUp = false;
+        if (needWakeWord() && alwaysOn() && !free) {
             Matcher m = WAKE.matcher(said);
             if (!m.find()) { listenAgainLater(200); return; }
             said = m.group(1).trim();
-            if (said.isEmpty()) { voice.speakLocal("Yes?"); return; }
+            if (said.isEmpty()) { followUp = true; voice.speakLocal("Yes?"); return; }
         }
 
         Commands.Action action = Commands.parse(said);
@@ -305,6 +339,8 @@ public class JarvisService extends Service {
             }
             case STOP_LISTENING:
                 stopListening();
+                paused = true;
+                toast("Jarvis paused. Tap the circle to wake it.");
                 bubble.setState(BubbleView.State.IDLE);
                 bubble.flash();
                 return;
@@ -363,6 +399,7 @@ public class JarvisService extends Service {
                 main.post(() -> {
                     if (!thinking) return;
                     thinking = false;
+                    followUp = true;
                     flushSpeech(true);
                     if (Prefs.str(JarvisService.this, Prefs.ENGINE, "fish").equals("off") && reply.length() > 0) {
                         toast(reply.toString());
@@ -408,7 +445,7 @@ public class JarvisService extends Service {
     }
 
     private void onSpeechFinished() {
-        if (thinking) return;
+        if (thinking || listening) return;
         bubble.setState(BubbleView.State.IDLE);
         listenAgainLater(250);
     }
