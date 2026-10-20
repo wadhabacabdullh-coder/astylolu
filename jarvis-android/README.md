@@ -3,7 +3,7 @@
 A voice assistant app with a floating circle in the corner of your screen.
 
 - **Opens apps:** "Open TikTok", "Open YouTube", and so on.
-- **Controls TikTok:** "Swipe up" / "Next", "Swipe down", "Pause", "Like it", "Auto scroll every 10 seconds".
+- **Controls TikTok:** "Scroll" (next video), "Like the post", "Comments", "Repost", "Share", "Close", "Swipe down", "Pause", "Auto scroll every 10 seconds".
 - **Answers questions:** OpenRouter is the AI and Fish Audio is the voice.
 - **The circle animates** while it listens (it grows with your voice), thinks (spinning) and talks (bouncing bars).
 
@@ -31,7 +31,9 @@ No Termux needed. The app talks to OpenRouter and Fish Audio directly.
 | Hold the circle | Opens the Jarvis settings screen |
 | Notification → Stop | Turns Jarvis off |
 
-**Phone commands** (instant and free, no AI credits): open *app*, swipe up/next, swipe down/previous, pause/play, like it, auto scroll (every N seconds), stop scrolling, go back, go home, recent apps, notifications, stop listening.
+**Phone commands** (instant and free, no AI credits): open *app*, scroll/next, swipe down/previous, like the post, comments, repost, share, close, pause/play, auto scroll (every N seconds), stop scrolling, go back, go home, recent apps, notifications, stop listening.
+
+Comments, Share and Repost work by finding the button with that label on screen (Repost: Jarvis opens Share, then taps Repost).
 
 Anything else is a question for the AI. Answers are short to save OpenRouter and Fish Audio credits.
 

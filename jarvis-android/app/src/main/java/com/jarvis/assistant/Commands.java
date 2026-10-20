@@ -12,7 +12,7 @@ final class Commands {
 
     enum Type {
         OPEN_APP, SWIPE_UP, SWIPE_DOWN, BACK, HOME, RECENTS, NOTIFICATIONS,
-        PLAY_PAUSE, LIKE, AUTO_SCROLL, STOP_SCROLL, STOP_LISTENING
+        PLAY_PAUSE, LIKE, COMMENTS, SHARE, REPOST, AUTO_SCROLL, STOP_SCROLL, STOP_LISTENING
     }
 
     static final class Action {
@@ -60,18 +60,22 @@ final class Commands {
         if (t.matches("(?:stop|end|cancel) (?:the )?(?:auto ?)?(?:scroll(?:ing)?|swip(?:e|ing))")) return act(Type.STOP_SCROLL);
         if (t.matches("(?:stop listening|go to sleep|goodbye|good bye|bye|that's all|dismiss)")) return act(Type.STOP_LISTENING);
 
-        if (t.matches("(?:swipe|scroll) up|next(?: video| one| tiktok| reel| short)?|skip(?: it| this| video| this video)?|scroll down|swipe")) {
+        if (t.matches("(?:swipe|scroll)(?: up| down| next)?|next(?: video| one| post| tiktok| reel| short)?|skip(?: it| this| video| this video)?")) {
             return act(Type.SWIPE_UP);
         }
-        if (t.matches("(?:swipe|scroll) down|previous(?: video| one)?|last (?:video|one)|go back (?:a|one) video|back (?:a|one) video|scroll up")) {
+        if (t.matches("swipe down|previous(?: video| one| post)?|last (?:video|one|post)|go back (?:a|one) (?:video|post)|back (?:a|one) (?:video|post)|scroll back(?: up)?")) {
             return act(Type.SWIPE_DOWN);
         }
+        if (t.matches("(?:open |show |show me |read |go to |see )?(?:the )?comments?(?: section)?")) return act(Type.COMMENTS);
+        if (t.matches("re ?post(?: it| this| that| (?:the |this )?(?:video|post|tiktok))?")) return act(Type.REPOST);
+        if (t.matches("share(?: it| this| that| (?:the |this )?(?:video|post|tiktok))?")) return act(Type.SHARE);
+        if (t.matches("close(?: (?:the )?comments)?|close (?:it|this)")) return act(Type.BACK);
         if (t.matches("(?:go )?back")) return act(Type.BACK);
         if (t.matches("(?:go )?home(?: screen)?|go to (?:the )?home(?: screen)?|close (?:the )?app|minimi[sz]e")) return act(Type.HOME);
         if (t.matches("(?:show |open )?(?:the )?recent(?:s| apps)")) return act(Type.RECENTS);
         if (t.matches("(?:show |open |pull down )?(?:the |my )?notifications")) return act(Type.NOTIFICATIONS);
         if (t.matches("pause(?: it| this| video| the video)?|play(?: it| video)?|resume|unpause|stop (?:the )?video")) return act(Type.PLAY_PAUSE);
-        if (t.matches("(?:like|heart|love)(?: it| this| that| (?:this |the )?video)?|double tap")) return act(Type.LIKE);
+        if (t.matches("(?:like|heart|love)(?: it| this| that| (?:this |the )?(?:video|post|tiktok))?|double tap")) return act(Type.LIKE);
 
         m = OPEN.matcher(t);
         if (m.matches()) {

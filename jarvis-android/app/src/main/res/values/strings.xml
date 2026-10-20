@@ -1,4 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="accessibility_desc">Lets Jarvis swipe, tap, go back and go home when you ask it to by voice (for example \"swipe up\" on TikTok). Jarvis does not read your screen.</string>
+    <string name="accessibility_desc">Lets Jarvis scroll, like, open comments, repost, go back and go home when you ask by voice. To press a button like Comments or Repost, Jarvis looks for its label on screen. Nothing on your screen is saved or sent anywhere.</string>
 </resources>

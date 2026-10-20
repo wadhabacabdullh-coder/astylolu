@@ -362,6 +362,21 @@ public class JarvisService extends Service {
                     case NOTIFICATIONS: ok = pc.global(AccessibilityService.GLOBAL_ACTION_NOTIFICATIONS); break;
                     case PLAY_PAUSE: ok = pc.tapCenter(1); break;
                     case LIKE: ok = pc.tapCenter(2); break;
+                    case COMMENTS:
+                        if (!pc.clickLabel(new String[]{"read or add comment", "comment"}, true, false)) {
+                            voice.speakLocal("I can't see a comments button here.");
+                            return;
+                        }
+                        break;
+                    case SHARE:
+                        if (!pc.clickLabel(new String[]{"share"}, true, false)) {
+                            voice.speakLocal("I can't see a share button here.");
+                            return;
+                        }
+                        break;
+                    case REPOST:
+                        repost(pc);
+                        return;
                     case AUTO_SCROLL:
                         autoScrollSeconds = a.seconds;
                         main.removeCallbacks(autoScroll);
@@ -375,6 +390,38 @@ public class JarvisService extends Service {
         bubble.flash();
         // Give the swipe or app launch a moment before listening again.
         listenAgainLater(900);
+    }
+
+    /** Repost lives in TikTok's share sheet: open Share, then wait for Repost to appear. */
+    private void repost(PhoneControl pc) {
+        String[] repost = {"repost"};
+        if (pc.clickLabel(repost, false, true)) {   // share sheet already open
+            bubble.flash();
+            listenAgainLater(900);
+            return;
+        }
+        if (!pc.clickLabel(new String[]{"share"}, true, false)) {
+            voice.speakLocal("I can't see a share button here.");
+            return;
+        }
+        bubble.setState(BubbleView.State.THINKING);
+        Runnable tryRepost = new Runnable() {
+            int tries;
+            @Override public void run() {
+                PhoneControl p = PhoneControl.instance;
+                if (p != null && p.clickLabel(repost, false, true)) {
+                    bubble.setState(BubbleView.State.IDLE);
+                    bubble.flash();
+                    listenAgainLater(900);
+                } else if (++tries < 8) {
+                    main.postDelayed(this, 300);
+                } else {
+                    bubble.setState(BubbleView.State.IDLE);
+                    voice.speakLocal("I couldn't find Repost for this video.");
+                }
+            }
+        };
+        main.postDelayed(tryRepost, 500);
     }
 
     // ---- Talking to the AI -------------------------------------------------
