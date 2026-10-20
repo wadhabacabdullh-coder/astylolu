@@ -1,5 +1,5 @@
 // Caches the app shell so Jarvis opens instantly. API calls always go to the network.
-const CACHE = "jarvis-v1";
+const CACHE = "jarvis-v2";
 const SHELL = ["./", "index.html", "manifest.webmanifest", "icon.svg", "icon-192.png", "icon-512.png"];
 
 self.addEventListener("install", (e) => {
@@ -16,7 +16,7 @@ self.addEventListener("activate", (e) => {
 
 self.addEventListener("fetch", (e) => {
   const url = new URL(e.request.url);
-  if (e.request.method !== "GET" || url.origin !== self.location.origin) return;
+  if (e.request.method !== "GET" || url.origin !== self.location.origin || url.pathname.includes("/api/")) return;
   // Network first so updates show up, cache as offline fallback.
   e.respondWith(
     fetch(e.request)

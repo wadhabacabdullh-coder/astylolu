@@ -1,7 +1,7 @@
 {
   "name": "Jarvis",
   "short_name": "Jarvis",
-  "description": "Fast voice AI assistant powered by Claude",
+  "description": "Fast voice AI assistant",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

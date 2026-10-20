@@ -79,6 +79,11 @@
   .small { font-size: 12px; color: var(--muted); margin-top: 4px; }
   .actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
   .actions button { border-radius: 10px; padding: 10px 16px; font-size: 15px; border: 1px solid var(--line); background: var(--bg); color: var(--text); }
+  .inline { display: flex; gap: 8px; }
+  .inline input { flex: 1; min-width: 0; }
+  .inline button { flex: none; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--accent); padding: 0 12px; font-size: 14px; }
+  .group { border-top: 1px solid var(--line); margin-top: 18px; padding-top: 4px; }
+  .group h3 { margin: 10px 0 0; font-size: 14px; color: var(--accent); letter-spacing: .05em; }
   .actions .primary { background: var(--accent); color: var(--bg); border-color: var(--accent); font-weight: 600; }
 </style>
 </head>
@@ -86,14 +91,14 @@
 <header>
   <h1>JARVIS</h1>
   <div class="right">
-    <span id="cost" title="Estimated spend this session">$0.00000</span>
+    <span id="cost" title="Spend this session">AI $0.00000</span>
     <button class="icon" id="clearBtn" aria-label="Clear conversation">⟲</button>
     <button class="icon" id="settingsBtn" aria-label="Settings">⚙</button>
   </div>
 </header>
 
 <main id="log">
-  <p class="hint" id="hint">Tap the mic and talk, or type below.<br>Add your Anthropic API key in ⚙ first.</p>
+  <p class="hint" id="hint">Tap the mic and talk, or type below.<br>Add your OpenRouter and Fish Audio keys in ⚙ first.</p>
 </main>
 
 <footer>
@@ -104,42 +109,73 @@
   </form>
 </footer>
 
+<audio id="player" preload="auto"></audio>
+
 <dialog id="settings">
   <form method="dialog" id="settingsForm">
     <h2>Settings</h2>
+    <div class="small">Keys are stored only on this phone and go only to your local Jarvis server, which passes them on to OpenRouter and Fish Audio.</div>
 
-    <label for="apiKey">Anthropic API key</label>
-    <input id="apiKey" type="password" placeholder="sk-ant-…" autocomplete="off">
-    <div class="small">Stored only on this phone (browser storage). Sent only to api.anthropic.com.</div>
+    <div class="group">
+      <h3>AI · OpenRouter</h3>
+      <label for="orKey">OpenRouter API key</label>
+      <input id="orKey" type="password" placeholder="sk-or-…" autocomplete="off">
 
-    <label for="model">Brain</label>
-    <select id="model">
-      <option value="claude-haiku-5-5">Haiku 5.5 — fastest, cheapest (recommended)</option>
-      <option value="claude-sonnet-5-5">Sonnet 5.5 — smarter, ~20× cost</option>
-      <option value="claude-opus-5-5">Opus 5.5 — smartest, ~40× cost</option>
-    </select>
+      <label for="model">Model</label>
+      <div class="inline">
+        <input id="model" type="text" list="modelList" autocomplete="off" spellcheck="false" placeholder="openrouter/free">
+        <button type="button" id="loadModels">Cheapest</button>
+      </div>
+      <datalist id="modelList"></datalist>
+      <div class="small" id="modelInfo">“openrouter/free” uses no credits but is rate-limited. Tap Cheapest for low-cost models that are faster.</div>
 
-    <label for="length">Reply length</label>
-    <select id="length">
-      <option value="250">Short (saves credits)</option>
-      <option value="600">Medium</option>
-      <option value="1500">Long</option>
-    </select>
+      <label for="length">Reply length</label>
+      <select id="length">
+        <option value="200">Short (saves credits)</option>
+        <option value="500">Medium</option>
+        <option value="1200">Long</option>
+      </select>
+    </div>
 
-    <label for="voice">Voice</label>
-    <select id="voice"></select>
+    <div class="group">
+      <h3>Voice</h3>
+      <label for="engine">Voice engine</label>
+      <select id="engine">
+        <option value="fish">Fish Audio (realistic, uses Fish credits)</option>
+        <option value="phone">Phone voice (free)</option>
+        <option value="off">Silent (text only)</option>
+      </select>
 
-    <label for="rate">Speaking speed</label>
-    <select id="rate">
-      <option value="0.9">Slow</option>
-      <option value="1">Normal</option>
-      <option value="1.15">Fast</option>
-      <option value="1.3">Very fast</option>
-    </select>
+      <label for="fishKey">Fish Audio API key</label>
+      <input id="fishKey" type="password" autocomplete="off">
 
-    <div class="row"><input id="handsFree" type="checkbox"><span>Hands-free (keeps listening after replying)</span></div>
-    <div class="row"><input id="wakeWord" type="checkbox"><span>Only respond when I say “Jarvis”</span></div>
-    <div class="row"><input id="speak" type="checkbox"><span>Speak replies out loud</span></div>
+      <label for="fishVoice">Fish voice ID</label>
+      <input id="fishVoice" type="text" autocomplete="off" spellcheck="false" placeholder="e.g. 802e3bc2b27e49c2995d23ef70e6ac89">
+      <div class="small">On fish.audio, open a voice and copy the ID from its link. Leave blank for the default voice.</div>
+
+      <label for="fishModel">Fish model</label>
+      <select id="fishModel">
+        <option value="s2-pro">s2-pro (best)</option>
+        <option value="s1">s1</option>
+      </select>
+
+      <label for="phoneVoice">Phone voice (fallback)</label>
+      <select id="phoneVoice"></select>
+
+      <label for="rate">Phone voice speed</label>
+      <select id="rate">
+        <option value="0.9">Slow</option>
+        <option value="1">Normal</option>
+        <option value="1.15">Fast</option>
+        <option value="1.3">Very fast</option>
+      </select>
+    </div>
+
+    <div class="group">
+      <h3>Listening</h3>
+      <div class="row"><input id="handsFree" type="checkbox"><span>Hands-free (keeps listening after replying)</span></div>
+      <div class="row"><input id="wakeWord" type="checkbox"><span>Only respond when I say “Jarvis”</span></div>
+    </div>
 
     <div class="actions">
       <button value="cancel" formnovalidate>Cancel</button>
@@ -153,26 +189,24 @@
 
 // ---- Config -------------------------------------------------------------
 
-// Rough $ per 1M tokens [input, output], used only for the on-screen spend counter.
-const PRICES = {
-  "claude-haiku-5-5": [0.10, 0.50],
-  "claude-sonnet-5-5": [2.00, 10.00],
-  "claude-opus-5-5": [4.00, 20.00],
-};
-
 // Only the last N messages are re-sent each turn. Every request pays for the
 // whole history again, so a short window is the biggest credit saver.
 const HISTORY_WINDOW = 8;
+
+// Fish Audio charges by text length, so after the first sentence (sent alone
+// so Jarvis starts talking fast) sentences are batched into larger chunks.
+const VOICE_CHUNK_CHARS = 120;
 
 const SYSTEM_PROMPT =
   "You are JARVIS, a witty, loyal personal AI assistant talking through a phone's speaker. " +
   "Your replies are read aloud, so: answer in 1-3 short sentences unless asked for more; " +
   "no markdown, bullet points, emojis, code blocks or URLs; spell things the way they should be spoken. " +
-  "Address the user as \"sir\" or \"ma'am\" only if they ask you to. Be direct and helpful.";
+  "Be direct and helpful.";
 
 const DEFAULTS = {
-  apiKey: "", model: "claude-haiku-5-5", length: "250", voice: "", rate: "1.15",
-  handsFree: false, wakeWord: false, speak: true,
+  orKey: "", model: "openrouter/free", length: "200",
+  engine: "fish", fishKey: "", fishVoice: "", fishModel: "s2-pro",
+  phoneVoice: "", rate: "1.15", handsFree: false, wakeWord: false,
 };
 
 // ---- State --------------------------------------------------------------
@@ -193,8 +227,9 @@ function loadSettings() {
 }
 
 let settings = loadSettings();
-let history = [];          // Anthropic message params
-let spend = 0;
+let history = [];          // OpenAI-style chat messages (without the system prompt)
+let aiSpend = 0;
+let voiceChars = 0;
 let busy = false;
 let abortCtl = null;
 
@@ -216,62 +251,132 @@ function addMsg(text, cls) {
   return el;
 }
 
-// ---- Speech output (free, on-device) ------------------------------------
+function updateCost() {
+  $("cost").textContent = `AI $${aiSpend.toFixed(5)}` + (voiceChars ? ` · 🔊 ${voiceChars}` : "");
+  $("cost").title = `OpenRouter spend this session; Fish Audio characters spoken: ${voiceChars}`;
+}
+
+// ---- Speech output ------------------------------------------------------
+// Chunks are fetched from Fish Audio as soon as they're ready (in parallel)
+// but always played in order. If Fish fails, that chunk uses the phone voice.
 
 const synth = window.speechSynthesis;
-let voices = [];
-let pendingUtterances = 0;
+const player = $("player");
+let phoneVoices = [];
+let voiceQueue = [];       // { text, audio: Promise<string|null> | null }
+let playing = false;
+let speechGen = 0;         // bumped on stop so stale chunks are dropped
+let fishWarned = false;
 
-function loadVoices() {
-  voices = synth ? synth.getVoices() : [];
-  const sel = $("voice");
+function loadPhoneVoices() {
+  phoneVoices = synth ? synth.getVoices() : [];
+  const sel = $("phoneVoice");
   sel.innerHTML = "";
-  const auto = new Option("Auto (best English voice)", "");
-  sel.add(auto);
-  for (const v of voices) sel.add(new Option(`${v.name} (${v.lang})`, v.name));
-  sel.value = settings.voice;
+  sel.add(new Option("Auto (best English voice)", ""));
+  for (const v of phoneVoices) sel.add(new Option(`${v.name} (${v.lang})`, v.name));
+  sel.value = settings.phoneVoice;
 }
 if (synth) {
-  loadVoices();
-  synth.onvoiceschanged = loadVoices;
+  loadPhoneVoices();
+  synth.onvoiceschanged = loadPhoneVoices;
 }
 
-function pickVoice() {
-  if (settings.voice) return voices.find((v) => v.name === settings.voice);
-  const en = voices.filter((v) => v.lang.startsWith("en"));
-  return en.find((v) => /en-GB/i.test(v.lang) && /male|daniel|george|uk english/i.test(v.name))
-      || en.find((v) => /en-GB/i.test(v.lang))
-      || en[0];
+function pickPhoneVoice() {
+  if (settings.phoneVoice) return phoneVoices.find((v) => v.name === settings.phoneVoice);
+  const en = phoneVoices.filter((v) => v.lang.startsWith("en"));
+  return en.find((v) => /en-GB/i.test(v.lang)) || en[0];
+}
+
+function cleanForSpeech(text) {
+  return text.replace(/[*_#`>~]/g, "").replace(/\[(.*?)\]\(.*?\)/g, "$1").replace(/\s+/g, " ").trim();
+}
+
+async function fetchFish(text) {
+  try {
+    const res = await fetch("api/tts", {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-fish-key": settings.fishKey },
+      body: JSON.stringify({ text, voice: settings.fishVoice, model: settings.fishModel }),
+    });
+    if (!res.ok) {
+      let msg = "";
+      try { msg = (await res.json()).message || ""; } catch {}
+      throw new Error(res.status === 401 || res.status === 403 ? "Fish Audio key rejected." :
+                      res.status === 402 ? "Fish Audio is out of credits." : `Fish Audio error ${res.status} ${msg}`);
+    }
+    voiceChars += text.length;
+    updateCost();
+    return URL.createObjectURL(await res.blob());
+  } catch (err) {
+    if (!fishWarned) { fishWarned = true; addMsg(err.message + " Using phone voice instead.", "err"); }
+    return null;
+  }
 }
 
 function speak(text) {
-  if (!settings.speak || !synth || !text.trim()) return;
-  const u = new SpeechSynthesisUtterance(text);
-  const v = pickVoice();
-  if (v) { u.voice = v; u.lang = v.lang; }
-  u.rate = parseFloat(settings.rate);
-  pendingUtterances++;
+  text = cleanForSpeech(text);
+  if (!text || settings.engine === "off") return;
+  const useFish = settings.engine === "fish" && settings.fishKey;
+  voiceQueue.push({ text, audio: useFish ? fetchFish(text) : null });
   mic.classList.add("speaking");
-  u.onend = u.onerror = () => {
-    pendingUtterances = Math.max(0, pendingUtterances - 1);
-    if (pendingUtterances === 0) onSpeechDone();
-  };
-  synth.speak(u);
+  playNext();
+}
+
+function isSpeaking() { return playing || voiceQueue.length > 0; }
+
+function playPhone(text) {
+  return new Promise((resolve) => {
+    if (!synth) return resolve();
+    const u = new SpeechSynthesisUtterance(text);
+    const v = pickPhoneVoice();
+    if (v) { u.voice = v; u.lang = v.lang; }
+    u.rate = parseFloat(settings.rate);
+    u.onend = u.onerror = resolve;
+    synth.speak(u);
+  });
+}
+
+function playUrl(url) {
+  return new Promise((resolve) => {
+    player.onended = player.onerror = player.onpause = resolve;
+    player.src = url;
+    player.play().catch(resolve);
+  });
+}
+
+async function playNext() {
+  if (playing) return;
+  const item = voiceQueue.shift();
+  if (!item) { onSpeechDone(); return; }
+  playing = true;
+  const gen = speechGen;
+  const url = item.audio ? await item.audio : null;
+  if (gen === speechGen) {
+    if (url) await playUrl(url); else await playPhone(item.text);
+  }
+  if (url) URL.revokeObjectURL(url);
+  if (gen !== speechGen) return;
+  playing = false;
+  playNext();
 }
 
 function stopSpeaking() {
-  if (!synth) return;
-  pendingUtterances = 0;
-  synth.cancel();
+  speechGen++;
+  voiceQueue = [];
+  playing = false;
+  player.pause();
+  synth?.cancel();
   mic.classList.remove("speaking");
 }
 
 function onSpeechDone() {
   mic.classList.remove("speaking");
-  if (!busy && settings.handsFree) startListening();
+  if (busy) return;
+  setStatus("Ready");
+  if (settings.handsFree) startListening();
 }
 
-// ---- Speech input (free, on-device / Google) ----------------------------
+// ---- Speech input (free, built into Chrome) -----------------------------
 
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 let rec = null;
@@ -326,69 +431,66 @@ function stopListening() {
   listening = false;
 }
 
-// ---- Claude -------------------------------------------------------------
+// ---- AI (OpenRouter) ----------------------------------------------------
 
 function requestBody() {
-  const model = settings.model;
   const body = {
-    model,
-    max_tokens: parseInt(settings.length, 10),
+    model: settings.model || DEFAULTS.model,
     stream: true,
-    system: SYSTEM_PROMPT,
-    messages: history.slice(-HISTORY_WINDOW),
-    // Low effort = fewer tokens and a faster first word.
-    output_config: { effort: "low" },
+    max_tokens: parseInt(settings.length, 10),
+    messages: [{ role: "system", content: SYSTEM_PROMPT }, ...history.slice(-HISTORY_WINDOW)],
+    // Keep "thinking" models brief and don't send their reasoning: faster, cheaper.
+    reasoning: { effort: "low", exclude: true },
+    usage: { include: true },
   };
-  // Skip thinking where the model allows it: faster and cheaper for chat.
-  if (model === "claude-haiku-5-5") body.thinking = { type: "disabled" };
-  else if (model === "claude-sonnet-5-5") body.thinking = { type: "between_tools" };
-  // Opus 5.5 can't disable thinking; low effort keeps it light.
+  // Route to whichever provider answers fastest (not for OpenRouter's own routers).
+  if (!body.model.startsWith("openrouter/")) body.provider = { sort: "latency" };
   return body;
 }
 
 function friendlyError(status, msg) {
-  if (status === 401) return "Your API key was rejected. Check it in ⚙ settings.";
-  if (status === 403) return "This API key isn't allowed to do that.";
-  if (status === 429) return "Rate limited — wait a moment and try again.";
-  if (status === 529 || status === 503) return "Claude is overloaded right now. Try again shortly.";
-  if (status === 400 && /credit/i.test(msg)) return "Your Anthropic account is out of credits.";
+  if (status === 401) return "Your OpenRouter key was rejected. Check it in ⚙ settings.";
+  if (status === 402) return "Your OpenRouter account is out of credits.";
+  if (status === 429) return "Rate limited. Free models have a daily limit; wait or pick a cheap paid model in ⚙.";
+  if (status === 404) return `Model not available: ${msg || settings.model}. Pick another in ⚙.`;
+  if (status === 502 || status === 503) return msg || "The AI service is busy. Try again.";
   return `Error ${status || ""}: ${msg || "request failed"}`;
 }
 
 async function ask(text) {
   if (busy) return;
-  if (!settings.apiKey) { addMsg("Add your Anthropic API key in ⚙ settings first.", "err"); $("settingsBtn").click(); return; }
+  if (!settings.orKey) { addMsg("Add your OpenRouter API key in ⚙ settings first.", "err"); $("settingsBtn").click(); return; }
   stopListening();
   stopSpeaking();
   busy = true;
   addMsg(text, "user");
   history.push({ role: "user", content: text });
-  // The first message sent must be from the user.
+  // Keep the history window starting on a user message.
   while (history.length > HISTORY_WINDOW && history[history.length - HISTORY_WINDOW].role !== "user") history.shift();
   setStatus("Thinking…", "thinking");
 
   const bubble = addMsg("…", "bot");
-  let reply = "", spoken = 0, inTok = 0, outTok = 0, stopReason = null;
+  let reply = "", spoken = 0, chunks = 0;
 
-  // Speak each sentence as soon as it's complete instead of waiting for the full reply.
+  // Hand finished sentences to the voice as they stream in.
   const flushSpeech = (final) => {
     const rest = reply.slice(spoken);
-    const re = final ? /[\s\S]+/ : /^[\s\S]*?[.!?…](?=\s)|^[\s\S]*?\n/;
-    const m = rest.match(re);
-    if (m) { speak(m[0]); spoken += m[0].length; if (!final) flushSpeech(false); }
+    if (final) { if (rest.trim()) speak(rest); spoken = reply.length; return; }
+    let cut = -1;
+    for (const m of rest.matchAll(/[.!?…]+(?=\s)|\n/g)) {
+      const end = m.index + m[0].length;
+      if (chunks === 0) { cut = end; break; }
+      if (end >= VOICE_CHUNK_CHARS) cut = end;
+    }
+    if (cut > 0) { speak(rest.slice(0, cut)); spoken += cut; chunks++; }
   };
 
   abortCtl = new AbortController();
   try {
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
+    const res = await fetch("api/chat", {
       method: "POST",
       signal: abortCtl.signal,
-      headers: {
-        "content-type": "application/json",
-        "x-api-key": settings.apiKey,
-        "anthropic-version": "2023-06-01",
-        "anthropic-dangerous-direct-browser-access": "true",
-      },
+      headers: { "content-type": "application/json", "x-openrouter-key": settings.orKey },
       body: JSON.stringify(requestBody()),
     });
     if (!res.ok) {
@@ -397,11 +499,10 @@ async function ask(text) {
       throw Object.assign(new Error(friendlyError(res.status, msg)), { shown: true });
     }
 
-    setStatus("Speaking…", "speaking");
     const reader = res.body.getReader();
     const dec = new TextDecoder();
     let buf = "";
-    for (;;) {
+    outer: for (;;) {
       const { value, done } = await reader.read();
       if (done) break;
       buf += dec.decode(value, { stream: true });
@@ -409,63 +510,74 @@ async function ask(text) {
       while ((nl = buf.indexOf("\n")) >= 0) {
         const line = buf.slice(0, nl).trim();
         buf = buf.slice(nl + 1);
-        if (!line.startsWith("data:")) continue;
+        if (!line.startsWith("data:")) continue;   // skips ": OPENROUTER PROCESSING" keep-alives
+        const data = line.slice(5).trim();
+        if (data === "[DONE]") break outer;
         let ev;
-        try { ev = JSON.parse(line.slice(5)); } catch { continue; }
-        if (ev.type === "message_start") {
-          const u = ev.message.usage || {};
-          inTok = (u.input_tokens || 0) + (u.cache_creation_input_tokens || 0) + (u.cache_read_input_tokens || 0);
-        } else if (ev.type === "content_block_delta" && ev.delta.type === "text_delta") {
-          reply += ev.delta.text;
+        try { ev = JSON.parse(data); } catch { continue; }
+        if (ev.error) throw Object.assign(new Error(friendlyError(ev.error.code, ev.error.message)), { shown: true });
+        const delta = ev.choices?.[0]?.delta?.content;
+        if (delta) {
+          if (!reply) setStatus("Speaking…", "speaking");
+          reply += delta;
           bubble.textContent = reply;
           log.scrollTop = log.scrollHeight;
           flushSpeech(false);
-        } else if (ev.type === "message_delta") {
-          stopReason = ev.delta.stop_reason || stopReason;
-          if (ev.usage?.output_tokens) outTok = ev.usage.output_tokens;
-        } else if (ev.type === "error") {
-          throw Object.assign(new Error(friendlyError(0, ev.error?.message)), { shown: true });
         }
+        if (typeof ev.usage?.cost === "number") { aiSpend += ev.usage.cost; updateCost(); }
       }
     }
 
-    if (stopReason === "refusal") {
-      reply = reply || "Sorry, I can't help with that one.";
-      bubble.textContent = reply;
-    }
     flushSpeech(true);
     if (!reply) bubble.textContent = "(no reply)";
     history.push({ role: "assistant", content: reply || "(no reply)" });
-
-    const [pIn, pOut] = PRICES[settings.model] || [0, 0];
-    spend += (inTok * pIn + outTok * pOut) / 1e6;
-    $("cost").textContent = "$" + spend.toFixed(5);
-    $("cost").title = `Last reply: ${inTok} in / ${outTok} out tokens`;
   } catch (err) {
     bubble.remove();
     history.pop(); // drop the unanswered user turn so history stays valid
     if (err.name !== "AbortError") {
-      const msg = err.shown ? err.message : "Network error — check your connection.";
+      const msg = err.shown ? err.message : "Can't reach the Jarvis server. Is it running in Termux?";
       addMsg(msg, "err");
       speak(msg.replace(/⚙/g, ""));
     }
   } finally {
     busy = false;
     abortCtl = null;
-    if (pendingUtterances === 0) {
-      setStatus("Ready");
-      if (settings.handsFree) startListening();
-    } else {
-      statusEl.textContent = "Speaking… (tap mic to interrupt)";
-    }
+    if (!isSpeaking()) onSpeechDone();
+    else statusEl.textContent = "Speaking… (tap mic to interrupt)";
   }
 }
+
+// ---- Model picker -------------------------------------------------------
+
+$("loadModels").addEventListener("click", async () => {
+  const info = $("modelInfo");
+  info.textContent = "Loading models…";
+  try {
+    const { data } = await (await fetch("api/models")).json();
+    const priced = data
+      .filter((m) => m.pricing && (m.architecture?.output_modalities || ["text"]).includes("text"))
+      .map((m) => ({ id: m.id, inp: +m.pricing.prompt * 1e6, out: +m.pricing.completion * 1e6 }))
+      .filter((m) => m.inp >= 0 && m.out >= 0)
+      .sort((a, b) => (a.inp + a.out * 3) - (b.inp + b.out * 3));
+    const list = $("modelList");
+    list.innerHTML = "";
+    for (const m of priced.slice(0, 60)) {
+      const label = m.inp === 0 && m.out === 0 ? "FREE (rate-limited)" : `$${m.inp.toFixed(2)} in / $${m.out.toFixed(2)} out per 1M tokens`;
+      list.appendChild(new Option(label, m.id));
+    }
+    info.textContent = `Loaded ${priced.length} models, cheapest first. Tap the Model box to choose. Paid models are faster than free ones.`;
+    $("model").value = "";
+    $("model").focus();
+  } catch {
+    info.textContent = "Couldn't load models. Is the Jarvis server running?";
+  }
+});
 
 // ---- UI wiring ----------------------------------------------------------
 
 mic.addEventListener("click", () => {
   if (busy) { abortCtl?.abort(); stopSpeaking(); return; }
-  if (pendingUtterances > 0) { stopSpeaking(); startListening(); return; }
+  if (isSpeaking()) { stopSpeaking(); startListening(); return; }
   if (listening) { stopListening(); setStatus("Ready"); return; }
   startListening();
 });
@@ -486,36 +598,29 @@ $("clearBtn").addEventListener("click", () => {
   setStatus("Conversation cleared");
 });
 
+const FIELDS = Object.keys(DEFAULTS);
 const dlg = $("settings");
 $("settingsBtn").addEventListener("click", () => {
-  $("apiKey").value = settings.apiKey;
-  $("model").value = settings.model;
-  $("length").value = settings.length;
-  $("voice").value = settings.voice;
-  $("rate").value = settings.rate;
-  $("handsFree").checked = settings.handsFree;
-  $("wakeWord").checked = settings.wakeWord;
-  $("speak").checked = settings.speak;
+  for (const k of FIELDS) {
+    const el = $(k);
+    if (el.type === "checkbox") el.checked = settings[k]; else el.value = settings[k];
+  }
   dlg.showModal();
 });
 
 dlg.addEventListener("close", () => {
   if (dlg.returnValue !== "save") return;
-  settings = {
-    apiKey: $("apiKey").value.trim(),
-    model: $("model").value,
-    length: $("length").value,
-    voice: $("voice").value,
-    rate: $("rate").value,
-    handsFree: $("handsFree").checked,
-    wakeWord: $("wakeWord").checked,
-    speak: $("speak").checked,
-  };
-  for (const [k, v] of Object.entries(settings)) store.set(k, String(v));
+  for (const k of FIELDS) {
+    const el = $(k);
+    settings[k] = el.type === "checkbox" ? el.checked : el.value.trim();
+    store.set(k, String(settings[k]));
+  }
+  if (!settings.model) settings.model = DEFAULTS.model;
+  fishWarned = false;
   setStatus("Settings saved");
 });
 
-if (!settings.apiKey) setTimeout(() => $("settingsBtn").click(), 300);
+if (!settings.orKey) setTimeout(() => $("settingsBtn").click(), 300);
 
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("sw.js").catch(() => {});
