@@ -87,6 +87,16 @@ android {
 
     testOptions {
         unitTests.isReturnDefaultValues = true
+        unitTests.isIncludeAndroidResources = true
+        unitTests.all {
+            it.maxHeapSize = "3g"
+            // Optional: alternative Maven repository for Robolectric's Android runtime jars.
+            (project.findProperty("robolectricRepoUrl") as String?)?.let { url ->
+                it.systemProperty("robolectric.dependency.repo.url", url)
+            }
+            System.getenv("STOCKFISH_HOST_BIN")?.let { bin -> it.environment("STOCKFISH_HOST_BIN", bin) }
+            it.systemProperty("screenshots.dir", layout.buildDirectory.dir("screenshots").get().asFile.absolutePath)
+        }
     }
 }
 
@@ -182,4 +192,10 @@ dependencies {
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.test.core)
+    testImplementation(libs.androidx.test.ext.junit)
+    testImplementation(platform(libs.androidx.compose.bom))
+    testImplementation(libs.androidx.compose.ui.test.junit4)
+    debugImplementation(libs.androidx.compose.ui.test.manifest)
 }

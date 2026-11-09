@@ -9,11 +9,10 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.compose.NavHost
@@ -50,7 +49,7 @@ class MainActivity : ComponentActivity() {
                 val nav = rememberNavController()
                 val context = LocalContext.current
                 LaunchedEffect(Unit) { gameVm.messages.collect { toast(context, it) } }
-                Box(Modifier.fillMaxSize().background(GmColors.Background).navigationBarsPadding()) {
+                Surface(Modifier.fillMaxSize().navigationBarsPadding(), color = GmColors.Background, contentColor = GmColors.TextPrimary) {
                     NavHost(
                         navController = nav,
                         startDestination = "home",

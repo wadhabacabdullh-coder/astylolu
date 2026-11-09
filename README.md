@@ -1,3 +1,5 @@
+> **Grandmaster AI (Android chess app with Stockfish 19)** lives in this repository too. See [GRANDMASTER_AI.md](GRANDMASTER_AI.md) for features, build and test instructions.
+
 # Aternos AFKBot ✨  
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](/LICENSE)  
 ### This AFK Bot will keep your Aternos server alive 24/7.
