@@ -1,0 +1,11 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <!-- Stylised king silhouette in the accent green -->
+    <path android:fillColor="#3DDC84"
+        android:pathData="M52,26h4v5h5v4h-5v5.2c4.6,1 8,5 8,9.8 0,2.6 -1,5 -2.6,6.8L68,74H40l6.6,-17.2C45,55 44,52.6 44,50c0,-4.8 3.4,-8.8 8,-9.8V35h-5v-4h5z"/>
+    <path android:fillColor="#3DDC84"
+        android:pathData="M36,77h36v5H36z"/>
+    <path android:fillColor="#E8EAED"
+        android:pathData="M34,84h40v4H34z"/>
+</vector>

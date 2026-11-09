@@ -1,0 +1,16 @@
+# Android / Gradle
+.gradle/
+build/
+/app/build/
+local.properties
+*.iml
+.idea/
+.cxx/
+captures/
+.externalNativeBuild/
+# Release signing material (never commit)
+keystore.properties
+*.jks
+*.keystore
+# Large NNUE network: fetched and SHA-256 verified by the build
+third_party/stockfish/net/*.nnue
