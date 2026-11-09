@@ -33,6 +33,8 @@ android {
         buildConfigField("String", "STOCKFISH_VERSION", "\"Stockfish 19\"")
         buildConfigField("String", "NNUE_FILE", "\"$nnueName\"")
         buildConfigField("String", "NNUE_SHA256", "\"$nnueSha256\"")
+        // ABIs for which a Stockfish executable is built.
+        ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64") }
     }
 
     val keystoreFile = rootProject.file("keystore.properties")
@@ -115,7 +117,9 @@ val prepareNnue by tasks.registering {
     description = "Fetches and verifies the Stockfish NNUE network"
     val local = stockfishDir.file("net/$nnueName").asFile
     val out = generatedAssets.map { it.file(nnueName) }
-    outputs.file(out)
+    inputs.file(stockfishDir.file("Copying.txt"))
+    inputs.file(stockfishDir.file("AUTHORS"))
+    outputs.dir(generatedAssets)
     doLast {
         fun sha256(f: File): String {
             val md = MessageDigest.getInstance("SHA-256")
@@ -149,19 +153,16 @@ val prepareNnue by tasks.registering {
         val target = out.get().asFile
         target.parentFile.mkdirs()
         local.copyTo(target, overwrite = true)
+        // GPL compliance: ship the Stockfish licence and authors list inside the app.
+        val licDir = File(target.parentFile, "licenses").apply { mkdirs() }
+        stockfishDir.file("Copying.txt").asFile.copyTo(File(licDir, "stockfish-COPYING.txt"), overwrite = true)
+        stockfishDir.file("AUTHORS").asFile.copyTo(File(licDir, "stockfish-AUTHORS.txt"), overwrite = true)
     }
 }
 
-tasks.configureEach {
-    if (name.matches(Regex("merge\\w*JniLibFolders")) || name.matches(Regex("merge\\w*NativeLibs"))) {
-        dependsOn(buildStockfish)
-    }
-    if (name.matches(Regex("merge\\w*Assets")) || name.matches(Regex("generate\\w*LintModel")) ||
-        name.matches(Regex("lintAnalyze\\w*")) || name.matches(Regex("\\w*LintReportModel\\w*"))
-    ) {
-        dependsOn(prepareNnue)
-    }
-}
+// The engine binaries and the network must exist before any variant task reads
+// the generated jniLibs/assets source folders (merge, lint, packaging...).
+tasks.named("preBuild") { dependsOn(buildStockfish, prepareNnue) }
 
 dependencies {
     implementation(libs.androidx.core.ktx)
